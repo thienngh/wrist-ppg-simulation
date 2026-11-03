@@ -36,3 +36,7 @@ python3 ppg_simulation.py --export
 Vessel enlargement does not imply proportional PPG amplitude enlargement. Cohort standard deviations are not time-series noise or individual confidence bounds. Normal blood pressure does not uniquely determine PPG morphology. This is an educational simulation, not a validated predictor of nerve block success or a medical measurement device.
 
 The large generated CSV is excluded from source control; regenerate it with Python or the browser download control.
+
+## Live Arduino UNO Q acquisition
+
+See [unoq_dual/README.md](unoq_dual/README.md) for the 3.3 V thermistor bridge and MAX30102 firmware, Python installation, wiring, sampling settings, and three live plots (temperature, smoothed PPG, and PPG amplitude). Recorded sensor data is excluded.
