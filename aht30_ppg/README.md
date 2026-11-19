@@ -113,3 +113,52 @@ For analysis, retain a stable baseline before inflating the cuff; Hold denotes t
 reached pressure plateau and Release denotes deflation. Start and Hold alone do
 not record exactly when inflation began: keep a known baseline interval or note
 inflation time separately. Never reconstruct a missing marker as a known event.
+
+## Feather 32u4 Bluefruit LE wireless acquisition
+
+Install **Adafruit AVR Boards** and **Adafruit BluefruitLE nRF51** in Arduino IDE.
+Select **Adafruit Feather 32u4**, then upload
+`Feather_AHT30_PPG_BLE/Feather_AHT30_PPG_BLE.ino` over USB.
+Both sensors share the Feather's labeled SDA and SCL pins (digital 2 and 3).
+Use power supplies and I2C pull-ups compatible with the Feather's 3.3 V logic.
+The integrated BLE module uses hardware SPI, CS 8, IRQ 7, and reset 4.
+
+Install the Python dependencies, enable Bluetooth on the Mac, and run from this folder:
+
+```bash
+python3 -m pip install -r requirements.txt
+python3 temperature_ppg_monitor.py --ble
+```
+
+Allow Bluetooth access if macOS requests it. The app discovers **KO192-Sensors**,
+subscribes to its Nordic UART notifications, and uses the existing graph and CSV
+recording controls. Connect a suitable battery before unplugging USB.
+The app retries Bluetooth connections and marks reconnections as acquisition gaps.
+USB operation remains available with `--port <device>`; the USB-only Feather
+sketch is `Feather_AHT30_PPG/Feather_AHT30_PPG.ino`.
+
+Both Feather sketches use 50 kHz I2C, read a complete FIFO sample before clearing
+overflow, and retry failed PPG initialization every two seconds. Recovery changes
+the segment number so filtering and amplitude windows restart across lost data.
+These measures recover acquisition after some transient failures; the intermittent
+PPG I2C fault observed on the hardware has not been isolated.
+
+Wireless records are 24-byte little-endian packets:
+`<2sBBIIIII` = magic A5 5A, type (P/T/E), segment, sequence,
+low 32 bits of sensor timestamp, value A, value B, low 32 bits of readout timestamp.
+P carries raw red/IR counts and both sample/readout timestamps.
+T carries signed temperature in milli-degrees Celsius and humidity in milli-%RH.
+E carries a numeric event code and value. BLE notifications can split packets;
+the receiver reassembles them, extends timestamp wraps, and passes records to
+the existing CSV writer. Sequence discontinuities remain visible to the monitor.
+
+PPG output is 50 Hz (20 ms/sample), temperature/humidity acquisition is 1 Hz,
+and the graph animation runs every 50 ms. BLE delivery adds variable buffering
+and scheduling delay; end-to-end one-way latency has not been established.
+The amplitude feature needs six seconds of continuous PPG before its first value
+and analyzes a window ending approximately one second behind the latest sample.
+
+Live verification while USB supplied power received 1,276 PPG records and
+26 temperature records over approximately 25 seconds with no PPG sequence gaps.
+The graph window showed Bluetooth connected and live PPG.
+Battery-only operation and longer-duration packet loss remain to be verified.

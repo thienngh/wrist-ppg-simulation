@@ -340,19 +340,24 @@ class Monitor:
         if self.last_temp is None or now-self.last_temp > 3:
             temp += ' | NO RECENT TEMPERATURE'
         state = 'RECORDING' if self.files else ('Saved '+self.run.name if self.run else 'Preview — click Start recording to save')
-        self.status.set_text(f'{temp} | {ppg} | {state}\n{self.last_marker}  {self.diagnostic}')
+        connection = getattr(self.port, 'status', '')
+        self.status.set_text(f'{temp} | {ppg} | {state}\n{connection}  {self.last_marker}  {self.diagnostic}')
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--port', help='Serial device; auto-selects when exactly one USB port exists')
+    parser.add_argument('--ble', action='store_true', help='Connect wirelessly to KO192-Sensors')
     parser.add_argument('--demo', action='store_true', help='Synthetic signals; no hardware')
     parser.add_argument('--list-ports', action='store_true')
     args = parser.parse_args()
-    if args.demo and args.port:
-        parser.error('Choose --demo or --port')
+    if sum((args.demo, args.ble, bool(args.port))) > 1:
+        parser.error('Choose one of --demo, --ble, or --port')
     port = None
-    if not args.demo or args.list_ports:
+    if args.ble:
+        from ble_transport import BleTransport
+        port = BleTransport()
+    if (not args.demo and not args.ble) or args.list_ports:
         import serial
         from serial.tools import list_ports
         ports = list(list_ports.comports())
